@@ -1,3 +1,5 @@
+// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
 
 // This is what triggers the behavior difference between Roslyn and mcs.  Roslyn will keep the reference
 // to this assembly because of this whereas mcs will not

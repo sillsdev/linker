@@ -1,4 +1,7 @@
-﻿namespace Mono.Linker.Tests.Cases.Attributes.Debugger.Dependencies
+﻿// Licensed to the .NET Foundation under one or more agreements.
+// The .NET Foundation licenses this file to you under the MIT license.
+
+namespace Mono.Linker.Tests.Cases.Attributes.Debugger.Dependencies
 {
 	public class DebuggerDisplayAttributeOnAssemblyUsingTargetTypeNameInOtherAssembly_Lib
 	{
