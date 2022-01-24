@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Xml.XPath;
+using ILLink.Shared;
 using Mono.Cecil;
 
 namespace Mono.Linker.Steps
@@ -56,7 +57,7 @@ namespace Mono.Linker.Steps
 
 			MethodDefinition? method = FindMethod (type, signature);
 			if (method == null) {
-				LogWarning ($"Could not find method '{signature}' on type '{type.GetDisplayName ()}'.", 2009, methodNav);
+				LogWarning (methodNav, DiagnosticId.XmlCouldNotFindMethodOnType, signature, type.GetDisplayName ());
 				return;
 			}
 
@@ -69,7 +70,7 @@ namespace Mono.Linker.Steps
 				string value = GetAttribute (methodNav, "value");
 				if (!string.IsNullOrEmpty (value)) {
 					if (!TryConvertValue (value, method.ReturnType, out object? res)) {
-						LogWarning ($"Invalid value for '{method.GetDisplayName ()}' stub.", 2010, methodNav);
+						LogWarning (methodNav, DiagnosticId.XmlInvalidValueForStub, method.GetDisplayName ());
 						return;
 					}
 
@@ -79,7 +80,7 @@ namespace Mono.Linker.Steps
 				_substitutionInfo.SetMethodAction (method, MethodAction.ConvertToStub);
 				return;
 			default:
-				LogWarning ($"Unknown body modification '{action}' for '{method.GetDisplayName ()}'.", 2011, methodNav);
+				LogWarning (methodNav, DiagnosticId.XmlUnkownBodyModification, action, method.GetDisplayName ());
 				return;
 			}
 		}
@@ -93,22 +94,22 @@ namespace Mono.Linker.Steps
 
 			var field = type.Fields.FirstOrDefault (f => f.Name == name);
 			if (field == null) {
-				LogWarning ($"Could not find field '{name}' on type '{type.GetDisplayName ()}'.", 2012, fieldNav);
+				LogWarning (fieldNav, DiagnosticId.XmlCouldNotFindFieldOnType, name, type.GetDisplayName ());
 				return;
 			}
 
 			if (!field.IsStatic || field.IsLiteral) {
-				LogWarning ($"Substituted field '{field.GetDisplayName ()}' needs to be static field.", 2013, fieldNav);
+				LogWarning (fieldNav, DiagnosticId.XmlSubstitutedFieldNeedsToBeStatic, field.GetDisplayName ());
 				return;
 			}
 
 			string value = GetAttribute (fieldNav, "value");
 			if (string.IsNullOrEmpty (value)) {
-				LogWarning ($"Missing 'value' attribute for field '{field.GetDisplayName ()}'.", 2014, fieldNav);
+				LogWarning (fieldNav, DiagnosticId.XmlMissingSubstitutionValueForField, field.GetDisplayName ());
 				return;
 			}
 			if (!TryConvertValue (value, field.FieldType, out object? res)) {
-				LogWarning ($"Invalid value '{value}' for '{field.GetDisplayName ()}'.", 2015, fieldNav);
+				LogWarning (fieldNav, DiagnosticId.XmlInvalidSubstitutionValueForField, value, field.GetDisplayName ());
 				return;
 			}
 
@@ -128,19 +129,19 @@ namespace Mono.Linker.Steps
 
 				string name = GetAttribute (resourceNav, "name");
 				if (String.IsNullOrEmpty (name)) {
-					LogWarning ($"Missing 'name' attribute for resource.", 2038, resourceNav);
+					LogWarning (resourceNav, DiagnosticId.XmlMissingNameAttributeInResource);
 					continue;
 				}
 
 				string action = GetAttribute (resourceNav, "action");
 				if (action != "remove") {
-					LogWarning ($"Invalid value '{action}' for attribute 'action' for resource '{name}'.", 2039, resourceNav);
+					LogWarning (resourceNav, DiagnosticId.XmlInvalidValueForAttributeActionForResource, action, name);
 					continue;
 				}
 
 				EmbeddedResource? resource = assembly.FindEmbeddedResource (name);
 				if (resource == null) {
-					LogWarning ($"Could not find embedded resource '{name}' to remove in assembly '{assembly.Name.Name}'.", 2040, resourceNav);
+					LogWarning (resourceNav, DiagnosticId.XmlCouldNotFindResourceToRemoveInAssembly, name, assembly.Name.Name);
 					continue;
 				}
 

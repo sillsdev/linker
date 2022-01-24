@@ -10,6 +10,7 @@ using System.IO;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Text;
+using ILLink.Shared;
 using Mono.Cecil;
 using Mono.Linker.Steps;
 
@@ -131,7 +132,7 @@ namespace Mono.Linker
 
 		void ErrorMissingArgument (string optionName)
 		{
-			Context.LogError ($"Missing argument for '{optionName}' option.", 1018);
+			Context.LogError (null, DiagnosticId.MissingArgumentForCommanLineOptionName, optionName);
 		}
 
 		// Perform setup of the LinkContext and parse the arguments.
@@ -161,7 +162,7 @@ namespace Mono.Linker
 			while (arguments.Count > 0) {
 				string token = arguments.Dequeue ();
 				if (token.Length < 2) {
-					context.LogError ($"Unrecognized command-line option: '{token}'.", 1015);
+					context.LogError (null, DiagnosticId.UnrecognizedCommandLineOption, token);
 					return -1;
 				}
 
@@ -263,7 +264,7 @@ namespace Mono.Linker
 							}
 
 							if (!IsValidAssemblyName (assemblyName)) {
-								context.LogError ($"Invalid assembly name '{assemblyName}'.", 1036);
+								context.LogError (null, DiagnosticId.InvalidAssemblyName, assemblyName);
 								return -1;
 							}
 
@@ -298,7 +299,7 @@ namespace Mono.Linker
 						var arg = arguments.Dequeue ();
 						string[] values = arg.Split ('=');
 						if (values?.Length != 2) {
-							context.LogError ($"Value used with '--custom-data' has to be in the KEY=VALUE format.", 1019);
+							context.LogError (null, DiagnosticId.CustomDataFormatIsInvalid);
 							return -1;
 						}
 
@@ -457,7 +458,7 @@ namespace Mono.Linker
 							return -1;
 
 						if (!GetWarningSuppressionWriterFileOutputKind (generateWarningSuppressionsArgument, out var fileOutputKind)) {
-							context.LogError ($"Invalid value '{generateWarningSuppressionsArgument}' for '--generate-warning-suppressions' option.", 1017);
+							context.LogError (null, DiagnosticId.InvalidGenerateWarningSuppressionsValue, generateWarningSuppressionsArgument);
 							return -1;
 						}
 
@@ -514,7 +515,7 @@ namespace Mono.Linker
 							string? assemblyName = GetNextStringValue ();
 							if (assemblyName != null) {
 								if (!IsValidAssemblyName (assemblyName)) {
-									context.LogError ($"Invalid assembly name '{assemblyName}'.", 1036);
+									context.LogError (null, DiagnosticId.InvalidAssemblyName, assemblyName);
 									return -1;
 								}
 
@@ -531,7 +532,7 @@ namespace Mono.Linker
 							string? assemblyName = GetNextStringValue ();
 							if (assemblyName != null) {
 								if (!IsValidAssemblyName (assemblyName)) {
-									context.LogError ($"Invalid assembly name '{assemblyName}'.", 1036);
+									context.LogError (null, DiagnosticId.InvalidAssemblyName, assemblyName);
 									return -1;
 								}
 
@@ -581,7 +582,7 @@ namespace Mono.Linker
 								return -1;
 
 							if (!File.Exists (xmlFile)) {
-								context.LogError ($"XML descriptor file '{xmlFile}' could not be found'.", 1033);
+								context.LogError (null, DiagnosticId.XmlDescriptorCouldNotBeFound, xmlFile);
 								return -1;
 							}
 
@@ -593,7 +594,7 @@ namespace Mono.Linker
 								return -1;
 
 							if (!File.Exists (assemblyFile) && assemblyFile.EndsWith (".dll", StringComparison.InvariantCultureIgnoreCase)) {
-								context.LogError ($"Root assembly '{assemblyFile}' could not be found.", 1032);
+								context.LogError (null, DiagnosticId.RootAssemblyCouldNotBeFound, assemblyFile);
 								return -1;
 							}
 
@@ -641,17 +642,17 @@ namespace Mono.Linker
 					}
 				}
 
-				context.LogError ($"Unrecognized command-line option: '{token}'.", 1015);
+				context.LogError (null, DiagnosticId.UnrecognizedCommandLineOption, token);
 				return -1;
 			}
 
 			if (inputs.Count == 0) {
-				context.LogError ($"No input files were specified. Use one of '{resolvers}' options.", 1020);
+				context.LogError (null, DiagnosticId.NoFilesToLinkSpecified, resolvers);
 				return -1;
 			}
 
 			if (new_mvid_used && deterministic_used) {
-				context.LogError ($"Options '--new-mvid' and '--deterministic' cannot be used at the same time.", 1021);
+				context.LogError (null, DiagnosticId.NewMvidAndDeterministicCannotBeUsedAtSameTime);
 				return -1;
 			}
 
@@ -762,10 +763,10 @@ namespace Mono.Linker
 					throw;
 				return lex.MessageContainer.Code ?? 1;
 			} catch (ResolutionException e) {
-				Context.LogError ($"{e.Message}", 1040);
+				Context.LogError (null, DiagnosticId.FailedToResolveMetadataElement, e.Message);
 			} catch (Exception) {
 				// Unhandled exceptions are usually linker bugs. Ask the user to report it.
-				Context.LogError ($"IL Trimmer has encountered an unexpected error. Please report the issue at https://github.com/dotnet/linker/issues", 1012);
+				Context.LogError (null, DiagnosticId.LinkerUnexpectedError);
 				// Don't swallow the exception and exit code - rethrow it and let the surrounding tooling decide what to do.
 				// The stack trace will go to stderr, and the MSBuild task will surface it with High importance.
 				throw;
@@ -809,9 +810,9 @@ namespace Mono.Linker
 					// (or even if a different path specifies the "same" assembly, based on the MVID).
 					return AssemblyLoadContext.Default.LoadFromAssemblyPath (assemblyPath);
 				}
-				Context.LogError ($"The assembly '{arg}' specified for '--custom-step' option could not be found.", 1022);
+				Context.LogError (null, DiagnosticId.AssemblyInCustomStepOptionCouldNotBeFound, arg);
 			} else
-				Context.LogError ($"The path to the assembly '{arg}' specified for '--custom-step' must be fully qualified.", 1023);
+				Context.LogError (null, DiagnosticId.AssemblyPathInCustomStepMustBeFullyQualified, arg);
 
 			return null;
 		}
@@ -877,13 +878,13 @@ namespace Mono.Linker
 			} else {
 				string[] parts = arg.Split (':');
 				if (parts.Length != 2) {
-					Context.LogError ($"Invalid value '{arg}' specified for '--custom-step' option.", 1024);
+					Context.LogError (null, DiagnosticId.InvalidArgForCustomStep, arg);
 					return false;
 				}
 				customStepName = parts[1];
 
 				if (!parts[0].StartsWith ("-") && !parts[0].StartsWith ("+")) {
-					Context.LogError ($"Expected '+' or '-' to control new step insertion.", 1025);
+					Context.LogError (null, DiagnosticId.ExpectedSignToControlNewStepInsertion);
 					return false;
 				}
 
@@ -905,7 +906,7 @@ namespace Mono.Linker
 
 				IStep? target = FindStep (pipeline, targetName);
 				if (target == null) {
-					Context.LogError ($"Pipeline step '{targetName}' could not be found.", 1026);
+					Context.LogError (null, DiagnosticId.PipelineStepCouldNotBeFound, targetName);
 					return false;
 				}
 
@@ -927,7 +928,7 @@ namespace Mono.Linker
 
 				IMarkHandler? target = FindMarkHandler (pipeline, targetName);
 				if (target == null) {
-					Context.LogError ($"Pipeline step '{targetName}' could not be found.", 1026);
+					Context.LogError (null, DiagnosticId.PipelineStepCouldNotBeFound, targetName);
 					return false;
 				}
 
@@ -939,7 +940,7 @@ namespace Mono.Linker
 				return true;
 			}
 
-			Context.LogError ($"Custom step '{stepType}' is incompatible with this trimmer version.", 1028);
+			Context.LogError (null, DiagnosticId.CustomStepTypeIsIncompatibleWithLinkerVersion, stepType.ToString ());
 			return false;
 		}
 
@@ -970,7 +971,7 @@ namespace Mono.Linker
 			Type? step = assembly != null ? assembly.GetType (type) : Type.GetType (type, false);
 
 			if (step == null) {
-				Context.LogError ($"Custom step '{type}' could not be found.", 1027);
+				Context.LogError (null, DiagnosticId.CustomStepTypeCouldNotBeFound, type);
 				return null;
 			}
 
@@ -982,12 +983,12 @@ namespace Mono.Linker
 			Type? step = assembly != null ? assembly.GetType (type) : Type.GetType (type, false);
 
 			if (step == null) {
-				Context.LogError ($"Custom step '{type}' could not be found.", 1027);
+				Context.LogError (null, DiagnosticId.CustomStepTypeCouldNotBeFound, type);
 				return null;
 			}
 
 			if (!typeof (TStep).IsAssignableFrom (step)) {
-				Context.LogError ($"Custom step '{type}' is incompatible with this trimmer version.", 1028);
+				Context.LogError (null, DiagnosticId.CustomStepTypeIsIncompatibleWithLinkerVersion, type);
 				return null;
 			}
 
@@ -1034,7 +1035,7 @@ namespace Mono.Linker
 				return AssemblyAction.AddBypassNGenUsed;
 			}
 
-			Context.LogError ($"Invalid assembly action '{s}'.", 1031);
+			Context.LogError (null, DiagnosticId.InvalidAssemblyAction, s);
 			return null;
 		}
 
@@ -1053,7 +1054,7 @@ namespace Mono.Linker
 				return AssemblyRootMode.Library;
 			}
 
-			Context.LogError ($"Invalid assembly root mode '{s}'.", 1037);
+			Context.LogError (null, DiagnosticId.InvalidAssemblyRootMode, s);
 			return null;
 		}
 
@@ -1065,7 +1066,7 @@ namespace Mono.Linker
 					return true;
 			}
 
-			Context.LogError ($"Invalid warning version '{text}'.", 1016);
+			Context.LogError (null, DiagnosticId.InvalidWarningVersion, text);
 			version = 0;
 			return false;
 		}
@@ -1096,7 +1097,7 @@ namespace Mono.Linker
 				return true;
 			}
 
-			Context.LogError ($"Invalid optimization value '{text}'.", 1029);
+			Context.LogError (null, DiagnosticId.InvalidOptimizationValue, text);
 			optimization = 0;
 			return false;
 		}
@@ -1115,7 +1116,7 @@ namespace Mono.Linker
 				return true;
 			}
 
-			Context.LogError ($"Invalid metadata value '{text}'.", 1046);
+			Context.LogError (null, DiagnosticId.InvalidMetadataOption, text);
 			metadataTrimming = 0;
 			return false;
 		}
@@ -1156,7 +1157,7 @@ namespace Mono.Linker
 				return true;
 			}
 
-			Context.LogError ($"Invalid argument for '{token}' option.", 1030);
+			Context.LogError (null, DiagnosticId.InvalidArgumentForTokenOption, token);
 			return false;
 		}
 

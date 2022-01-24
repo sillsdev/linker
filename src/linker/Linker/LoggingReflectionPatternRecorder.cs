@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // © .NET Foundation and contributions
 
+using ILLink.Shared;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 
